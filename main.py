@@ -50,11 +50,16 @@ def get_comments(response):
     print(all_comments)
 
 
+def get_genre(response):
+    soup = BeautifulSoup(response.text, 'lxml')
+    genre_tag = soup.find("span", class_="d_book").find_all("a")
+    genre = [genre_book.text for genre_book in genre_tag]
+    print(genre)
+
 
 def main():
     Path("books").mkdir(parents=True, exist_ok=True)
     Path("books_image").mkdir(parents=True, exist_ok=True)
-    Path("books_comments").mkdir(parents=True, exist_ok=True)
 
 
     for id in range(1, 11):
@@ -70,14 +75,15 @@ def main():
         page_response = requests.get(page_url)
         page_response.raise_for_status()
         filename = get_books_name(page_response)
-        download_txt(page_response, f"{id}. {filename}.txt")
+        download_txt(response_for_downloading, f"{id}. {filename}.txt")
         imgpath = get_url_image(page_response)
         if imgpath == "https://tululu.org/images/nopic.gif":
             filename = "nopic.gif"
         else:
             filename = f"{id}.png"
         dowload_image(imgpath, filename)
-        get_comments(page_response)
+        # get_comments(page_response)
+        get_genre(page_response)
 
 
 if __name__ == "__main__":
