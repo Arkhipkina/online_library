@@ -35,7 +35,6 @@ def dowload_image(imgpath, filename, folder="books_image"):
         file.write(response.content)
 
 
-
 def parse_book_page(response):
     soup = BeautifulSoup(response.text, 'lxml')
 
@@ -76,7 +75,6 @@ def main():
     Path("books_image").mkdir(parents=True, exist_ok=True)
 
     start_id, end_id = get_optional_arguments()
-    print(start_id, end_id)
     for id in range(start_id, end_id+1):
         url_for_downloading = f"https://tululu.org/txt.php?id={id}"
         filename = f'books/book_{id}.txt'
@@ -90,18 +88,14 @@ def main():
         page_response = requests.get(page_url)
         page_response.raise_for_status()
         book_page = parse_book_page(page_response)
+        filename = book_page["Заголовок"]
         download_txt(response_for_downloading, f"{id}. {filename}.txt")
         imgpath = get_url_image(page_response)
         if imgpath == "https://tululu.org/images/nopic.gif":
-            filename = "nopic.gif"
+            filename_image = "nopic.gif"
         else:
             filename_image = f"{id}.png"
         dowload_image(imgpath, filename_image)
-
-        filename = book_page["Заголовок"]
-        author = book_page["Автор"]
-        
-        print(f"Заголовок: {filename} \n Автор: {author}")
 
 
 if __name__ == "__main__":
