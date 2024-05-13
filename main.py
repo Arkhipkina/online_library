@@ -37,19 +37,26 @@ def dowload_image(imgpath, filename, folder="books_image"):
 
 def parse_book_page(response):
     soup = BeautifulSoup(response.text, 'lxml')
+
     title_tag = soup.find(id="content").find("h1")
     title_text = title_tag.text
     book_title, book_author = title_text.split(" :: ")
     book_title = book_title.strip()
-    book_autor = book_author.strip()
-
-    comments_tag = soup.find_all(class_="texts")
-    all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
+    book_author = book_author.strip()
 
     genre_tag = soup.find("span", class_="d_book").find_all("a")
     genre = [genre_book.text for genre_book in genre_tag]
 
-    return book_title
+    comments_tag = soup.find_all(class_="texts")
+    all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
+
+    book_page = {"Заголовок:": book_title,
+                 "Автор:": book_author,
+                 "Жанр:": genre,
+                 "Комментарии:": all_comments,
+                 }
+
+    return book_page, book_title
 
 
 def main():
@@ -69,7 +76,7 @@ def main():
         page_url = f"https://tululu.org/b{id}"
         page_response = requests.get(page_url)
         page_response.raise_for_status()
-        filename = parse_book_page(page_response)
+        book_page, filename = parse_book_page(page_response)
         download_txt(response_for_downloading, f"{id}. {filename}.txt")
         imgpath = get_url_image(page_response)
         if imgpath == "https://tululu.org/images/nopic.gif":
@@ -77,6 +84,7 @@ def main():
         else:
             filename = f"{id}.png"
         dowload_image(imgpath, filename)
+        print(book_page)
 
 
 if __name__ == "__main__":
