@@ -11,15 +11,6 @@ def check_for_redirect(response):
         raise requests.exceptions.HTTPError
 
 
-def get_books_name(response):
-        soup = BeautifulSoup(response.text, 'lxml')
-        title_tag = soup.find(id="content").find("h1")
-        title_text = title_tag.text
-        book_title, book_author = title_text.split(" :: ")
-        book_title = book_title.strip()
-        return book_title
-
-
 def download_txt(response, filename, folder="books"):
     filename = sanitize_filename(filename)
     filepath = os.path.join(folder, filename)
@@ -43,18 +34,22 @@ def dowload_image(imgpath, filename, folder="books_image"):
         file.write(response.content)
 
 
-def get_comments(response):
+
+def parse_book_page(response):
     soup = BeautifulSoup(response.text, 'lxml')
+    title_tag = soup.find(id="content").find("h1")
+    title_text = title_tag.text
+    book_title, book_author = title_text.split(" :: ")
+    book_title = book_title.strip()
+    book_autor = book_author.strip()
+
     comments_tag = soup.find_all(class_="texts")
     all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
-    print(all_comments)
 
-
-def get_genre(response):
-    soup = BeautifulSoup(response.text, 'lxml')
     genre_tag = soup.find("span", class_="d_book").find_all("a")
     genre = [genre_book.text for genre_book in genre_tag]
-    print(genre)
+
+    return book_title
 
 
 def main():
@@ -74,7 +69,7 @@ def main():
         page_url = f"https://tululu.org/b{id}"
         page_response = requests.get(page_url)
         page_response.raise_for_status()
-        filename = get_books_name(page_response)
+        filename = parse_book_page(page_response)
         download_txt(response_for_downloading, f"{id}. {filename}.txt")
         imgpath = get_url_image(page_response)
         if imgpath == "https://tululu.org/images/nopic.gif":
@@ -82,8 +77,6 @@ def main():
         else:
             filename = f"{id}.png"
         dowload_image(imgpath, filename)
-        # get_comments(page_response)
-        get_genre(page_response)
 
 
 if __name__ == "__main__":
