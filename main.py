@@ -1,5 +1,6 @@
 import requests
 import os.path
+import argparse
 from urllib.parse import urljoin
 from pathlib import Path
 from bs4 import BeautifulSoup
@@ -50,21 +51,33 @@ def parse_book_page(response):
     comments_tag = soup.find_all(class_="texts")
     all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
 
-    book_page = {"Заголовок:": book_title,
-                 "Автор:": book_author,
-                 "Жанр:": genre,
-                 "Комментарии:": all_comments,
+    book_page = {"Заголовок": book_title,
+                 "Автор": book_author,
+                 "Жанр": genre,
+                 "Комментарии": all_comments,
                  }
 
-    return book_page, book_title
+    return book_page
+
+
+def get_optional_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--start_id", default=1, type=int)
+    parser.add_argument("-e", "--end_id", default=10, type=int)
+    args = parser.parse_args()
+    start_id = args.start_id
+    end_id = args.end_id
+
+    return start_id, end_id
 
 
 def main():
     Path("books").mkdir(parents=True, exist_ok=True)
     Path("books_image").mkdir(parents=True, exist_ok=True)
 
-
-    for id in range(1, 11):
+    start_id, end_id = get_optional_arguments()
+    print(start_id, end_id)
+    for id in range(start_id, end_id+1):
         url_for_downloading = f"https://tululu.org/txt.php?id={id}"
         filename = f'books/book_{id}.txt'
         response_for_downloading = requests.get(url_for_downloading)
@@ -76,15 +89,19 @@ def main():
         page_url = f"https://tululu.org/b{id}"
         page_response = requests.get(page_url)
         page_response.raise_for_status()
-        book_page, filename = parse_book_page(page_response)
+        book_page = parse_book_page(page_response)
         download_txt(response_for_downloading, f"{id}. {filename}.txt")
         imgpath = get_url_image(page_response)
         if imgpath == "https://tululu.org/images/nopic.gif":
             filename = "nopic.gif"
         else:
-            filename = f"{id}.png"
-        dowload_image(imgpath, filename)
-        print(book_page)
+            filename_image = f"{id}.png"
+        dowload_image(imgpath, filename_image)
+
+        filename = book_page["Заголовок"]
+        author = book_page["Автор"]
+        
+        print(f"Заголовок: {filename} \n Автор: {author}")
 
 
 if __name__ == "__main__":
