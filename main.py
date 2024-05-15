@@ -1,6 +1,7 @@
 import requests
 import os.path
 import argparse
+import time
 from urllib.parse import urljoin
 from pathlib import Path
 from bs4 import BeautifulSoup
@@ -20,13 +21,6 @@ def download_txt(response, filename, folder="books"):
     return filepath
 
 
-def get_url_image(response):
-    soup = BeautifulSoup(response.text, 'lxml')
-    img_tag = soup.find(class_="bookimage").find("img")["src"]
-    imgpath = urljoin("https://tululu.org/", img_tag)
-    return imgpath
-
-
 def dowload_image(imgpath, filename, folder="books_image"):
     response = requests.get(imgpath)
     response.raise_for_status()
@@ -44,25 +38,28 @@ def parse_book_page(response):
     book_title = book_title.strip()
     book_author = book_author.strip()
 
-    genre_tag = soup.find("span", class_="d_book").find_all("a")
-    genre = [genre_book.text for genre_book in genre_tag]
+    genre_tags = soup.find("span", class_="d_book").find_all("a")
+    genres = [genre_books.text for genre_books in genre_tags]
 
     comments_tag = soup.find_all(class_="texts")
     all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
 
-    book_page = {"Заголовок": book_title,
-                 "Автор": book_author,
-                 "Жанр": genre,
-                 "Комментарии": all_comments,
+    book_page = {"Title": book_title,
+                 "Author": book_author,
+                 "Genre": genres,
+                 "Comments": all_comments
                  }
+    
+    img_tag = soup.find(class_="bookimage").find("img")["src"]
+    imgpath = urljoin("https://tululu.org/", img_tag)
 
-    return book_page
+    return book_page, imgpath
 
 
 def get_optional_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--start_id", default=1, type=int)
-    parser.add_argument("-e", "--end_id", default=10, type=int)
+    parser.add_argument("-s", "--start_id", help='add start id of book', default=1, type=int)
+    parser.add_argument("-e", "--end_id", help='add end id of book', default=10, type=int)
     args = parser.parse_args()
     start_id = args.start_id
     end_id = args.end_id
@@ -75,27 +72,42 @@ def main():
     Path("books_image").mkdir(parents=True, exist_ok=True)
 
     start_id, end_id = get_optional_arguments()
-    for id in range(start_id, end_id+1):
-        url_for_downloading = f"https://tululu.org/txt.php?id={id}"
-        filename = f'books/book_{id}.txt'
-        response_for_downloading = requests.get(url_for_downloading)
-        response_for_downloading.raise_for_status()
+    for number in range(start_id, end_id+1):
         try:
+            url_for_downloading = f"https://tululu.org/txt.php"
+            params = {'id': number}
+            
+            filename = f'books/book_{number}.txt'
+            
+            response_for_downloading = requests.get(url_for_downloading, params=params)
+            response_for_downloading.raise_for_status()
+
             check_for_redirect(response_for_downloading)
+
+            page_response = requests.get(page_url)
+            page_response.raise_for_status()
+
+            check_for_redirect(page_response)
+
+            download_txt(response_for_downloading, f"{number}. {filename}.txt")
+
+            page_url = f"https://tululu.org/b{number}"
+            
+            book_page, imgpath = parse_book_page(page_response)
+            filename = book_page["Title"]
+
+            if imgpath == "https://tululu.org/images/nopic.gif":
+                filename_image = "nopic.gif"
+            else:
+                filename_image = f"{number}.png"
+
+                dowload_image(imgpath, filename_image)
         except requests.exceptions.HTTPError:
-            continue
-        page_url = f"https://tululu.org/b{id}"
-        page_response = requests.get(page_url)
-        page_response.raise_for_status()
-        book_page = parse_book_page(page_response)
-        filename = book_page["Заголовок"]
-        download_txt(response_for_downloading, f"{id}. {filename}.txt")
-        imgpath = get_url_image(page_response)
-        if imgpath == "https://tululu.org/images/nopic.gif":
-            filename_image = "nopic.gif"
-        else:
-            filename_image = f"{id}.png"
-        dowload_image(imgpath, filename_image)
+            print('Книги не существует.')
+        except requests.exceptions.ConnectionError:
+            print('Проверьте подключение к интернету.')
+            time.sleep(5)
+
 
 
 if __name__ == "__main__":
