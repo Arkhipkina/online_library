@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ```
 - Запустите сервер командой 
 ``` python
-python main.py runserver
+python main.py
 ```
 
 ## Необязательные аргументы
