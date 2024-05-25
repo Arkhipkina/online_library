@@ -21,15 +21,15 @@ def download_txt(response, filename, folder="books"):
     return filepath
 
 
-def dowload_image(imgpath, filename, folder="books_image"):
-    response = requests.get(imgpath)
+def dowload_image(imgurl, filename, folder="books_image"):
+    response = requests.get(imgurl)
     response.raise_for_status()
     filepath = os.path.join(folder, filename)
     with open(filepath, 'wb') as file:
         file.write(response.content)
 
 
-def parse_book_page(response):
+def parse_book_page(response, page_url):
     soup = BeautifulSoup(response.text, 'lxml')
 
     title_tag = soup.find(id="content").find("h1")
@@ -44,20 +44,22 @@ def parse_book_page(response):
     comments_tag = soup.find_all(class_="texts")
     all_comments = [comment_book.find(class_="black").text for comment_book in comments_tag]
 
-    book_page = {"Title": book_title,
+    img_tag = soup.find(class_="bookimage").find("img")["src"]
+    imgurl = urljoin(page_url, img_tag)
+
+    book_page = {
+                "Title": book_title,
                  "Author": book_author,
                  "Genre": genres,
-                 "Comments": all_comments
-                 }
-    
-    img_tag = soup.find(class_="bookimage").find("img")["src"]
-    imgpath = urljoin("https://tululu.org/", img_tag)
+                 "Comments": all_comments,
+                'Imgurl': imgurl
+    }
 
-    return book_page, imgpath
+    return book_page
 
 
 def get_optional_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='downloading books from online library')
     parser.add_argument("-s", "--start_id", help='add start id of book', default=1, type=int)
     parser.add_argument("-e", "--end_id", help='add end id of book', default=10, type=int)
     args = parser.parse_args()
@@ -84,24 +86,23 @@ def main():
 
             check_for_redirect(response_for_downloading)
 
+            page_url = f"https://tululu.org/b{number}"
+
             page_response = requests.get(page_url)
             page_response.raise_for_status()
 
-            check_for_redirect(page_response)
-
             download_txt(response_for_downloading, f"{number}. {filename}.txt")
-
-            page_url = f"https://tululu.org/b{number}"
             
-            book_page, imgpath = parse_book_page(page_response)
+            book_page = parse_book_page(page_response, page_url)
             filename = book_page["Title"]
+            imgurl = book_page['Imgurl']
 
-            if imgpath == "https://tululu.org/images/nopic.gif":
+            if imgurl == "https://tululu.org/images/nopic.gif":
                 filename_image = "nopic.gif"
             else:
                 filename_image = f"{number}.png"
 
-                dowload_image(imgpath, filename_image)
+            dowload_image(imgurl, filename_image)
         except requests.exceptions.HTTPError:
             print('Книги не существует.')
         except requests.exceptions.ConnectionError:
