@@ -48,11 +48,11 @@ def parse_book_page(response, page_url):
     imgurl = urljoin(page_url, img_tag)
 
     book_page = {
-                "Title": book_title,
-                 "Author": book_author,
-                 "Genre": genres,
-                 "Comments": all_comments,
-                'Imgurl': imgurl
+        "Title": book_title,
+        "Author": book_author,
+        "Genre": genres,
+        "Comments": all_comments,
+        "Imgurl": imgurl
     }
 
     return book_page
@@ -67,7 +67,6 @@ def get_optional_arguments():
     end_id = args.end_id
 
     return start_id, end_id
-
 
 def main():
     Path("books").mkdir(parents=True, exist_ok=True)
@@ -90,11 +89,11 @@ def main():
 
             page_response = requests.get(page_url)
             page_response.raise_for_status()
+            check_for_redirect(page_response)
 
-            download_txt(response_for_downloading, f"{number}. {filename}.txt")
+            download_txt(response_for_downloading, f"{number}. {filename}")
             
             book_page = parse_book_page(page_response, page_url)
-            filename = book_page["Title"]
             imgurl = book_page['Imgurl']
 
             if imgurl == "https://tululu.org/images/nopic.gif":
