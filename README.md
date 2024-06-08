@@ -9,7 +9,7 @@
 ``` python
 pip install -r requirements.txt
 ```
-- Запустите сервер командой 
+- Запустите скрипт командой 
 ``` python
 python main.py
 ```
@@ -23,7 +23,7 @@ python main.py
 ## Пример запуска
 Если Вы хотите скачать книги от 1 до 10:
 ``` python
-python main.py runserver
+python main.py
 ```
 
 Если Вы хотите скачать книги от 20 до 30:
